@@ -112,6 +112,9 @@ oc tag reporting-service:$tag reporting-service:$env
 oc tag notification-service:$tag notification-service:$env
 oc tag event-handler-service:$tag event-handler-service:$env
 
+# File Upload Service
+oc tag fileupload-service:$tag fileupload-service:$env
+
 # Start everying
 scale api $podsApi sts $env
 scale charts-api $podsCharts dc $env
