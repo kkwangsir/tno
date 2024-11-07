@@ -1,0 +1,20 @@
+---
+# Configuration settings
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: fileupload-service
+  namespace: default
+  annotations:
+    description: fileupload service configuration settings
+    created-by: jacob.wang
+  labels:
+    name: fileupload-service
+    part-of: tno
+    version: 1.0.0
+    component: fileupload-service
+    managed-by: kustomize
+data:
+  MAX_FAIL_LIMIT: "5"
+  CHES_EMAIL_ENABLED: "true"
+  CHES_EMAIL_AUTHORIZED: "true"

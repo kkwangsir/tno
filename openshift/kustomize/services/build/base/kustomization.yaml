@@ -16,3 +16,4 @@ resources:
   - folder-collection.yaml
   - scheduler.yaml
   - event-handler.yaml
+  - fileupload.yaml
