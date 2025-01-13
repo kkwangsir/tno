@@ -17,6 +17,7 @@ using TNO.Kafka.Models;
 using TNO.Services.Managers;
 using TNO.Services.Transcription.Config;
 using TNO.Services.Transcription.Exceptions;
+using Microsoft.EntityFrameworkCore;
 namespace TNO.Services.Transcription;
 
 /// <summary>
@@ -388,7 +389,7 @@ public class TranscriptionManager : ServiceManager<TranscriptionOptions>
                         if (String.CompareOrdinal(original, content.Body) != 0) this.Logger.LogWarning("Transcription will be overwritten.  Content ID: {Id}", requestContentId);
 
                         content.Body = GetFormattedTranscript(transcript);
-                        await this.Api.UpdateContentAsync(content); // TODO: This can result in an editor getting a optimistic concurrency error.
+                        await UpdateWithRetryAsync(content);
                         this.Logger.LogInformation("Transcription updated.  Content ID: {Id}", requestContentId);
 
                         await UpdateWorkOrderAsync(request, WorkOrderStatus.Completed);
@@ -571,6 +572,33 @@ public class TranscriptionManager : ServiceManager<TranscriptionOptions>
             this.Logger.LogDebug("File conversion details: {output}", output);
         }
         return result == 0 ? destFile : string.Empty;
+    }
+
+    public async Task UpdateWithRetryAsync(ContentModel content, int maxRetries = 3)
+    {
+        int retryCount = 0;
+        while (retryCount < maxRetries)
+        {
+            try
+            {
+                this.Logger.LogInformation("Attempting to update content ID: {id}, Version: {version}, Attempt: {attempt}/{maxAttempts}",
+                    content.Id, content.Version, retryCount + 1, maxRetries);
+                await this.Api.UpdateContentAsync(content);
+                break;
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (retryCount == maxRetries - 1) throw;
+
+                await Task.Delay(TimeSpan.FromMilliseconds(100 * Math.Pow(2, retryCount)));
+
+                var freshContent = await this.Api.FindContentByIdAsync(content.Id);
+                if (freshContent == null) throw;
+
+                content.Version = freshContent.Version;
+                retryCount++;
+            }
+        }
     }
     #endregion
 }
